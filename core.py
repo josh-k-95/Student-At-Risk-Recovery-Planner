@@ -95,7 +95,17 @@ def a_star(start):
 
     return None, float('inf'), None
 
+def csv_row_to_state(row):
+    state = State(
+                float(row['attendance_rate']),
+                float(row['missing_submissions']),
+                float(row['avg_quiz_score']),
+                float(row['lms_activity']),
+                float(row['study_hours_per_week']),
+                float(row['days_to_deadline'])
+            )
 
+    return state
 # ----------------------------
 # READ CSV + RUN
 # ----------------------------

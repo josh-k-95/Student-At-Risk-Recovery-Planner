@@ -11,8 +11,8 @@ A Streamlit application for tracking and planning interventions for at-risk stud
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd <repository-name>
+   git clone https://github.com/josh-k-95/Student-At-Risk-Recovery-Planner 
+   cd Student-At-Risk-Recovery-Planner
    ```
 
 2. **Create a virtual environment** (recommended)
@@ -34,7 +34,7 @@ A Streamlit application for tracking and planning interventions for at-risk stud
 
 4. **Install required packages**
    ```bash
-   pip install streamlit pandas
+   pip install streamlit 
    ```
    
   

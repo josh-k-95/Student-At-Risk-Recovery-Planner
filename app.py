@@ -59,8 +59,8 @@ with st.sidebar:
                 row = st.session_state.student_df[
                     st.session_state.student_df["student_id"] == chosen_id
                 ].iloc[0]
-                # ← Member A's csv_row_to_state() converts the row
-                st.session_state.current_state = csv_row_to_state(row)
+                # ← Member A's core.csv_row_to_state() converts the row
+                st.session_state.current_state = core.csv_row_to_state(row)
                 st.session_state.result        = None
                 st.success(f"Student {chosen_id} loaded.")
 
@@ -219,7 +219,7 @@ with tab_dashboard:
                 f"avg_quiz_score     : {init.score:.1f}\n"
                 f"lms_activity       : {init.activity:.1f}\n"
                 f"days_to_deadline   : {init.days}\n"
-                f"fatigue_level      : {init['fatigue']}\n"
+                f"fatigue_level      : {7}\n"   #to be changed
                 f"─────────────────────────────\n"
                 f"risk_score         : {init_risk:.4f}\n"
                 f"status             : {'⚠️ AT RISK' if init_risk > risk_threshold else '✅ NOT AT RISK'}"
@@ -317,7 +317,7 @@ with tab_dataset:
 
         # Add computed risk score column (← Member A's core.risk_score)
         df["risk_score"] = df.apply(lambda r: round(core.risk_score(
-            csv_row_to_state(r)), 3), axis=1)
+            core.csv_row_to_state(r)), 3), axis=1)
         df["status"] = df["risk_score"].apply(
             lambda x: "⚠️ At-Risk" if x > risk_threshold else "✅ Safe"
         )
@@ -364,6 +364,8 @@ with tab_comparison:
             plan_a, cost_a, _, rt_a, exp_a = run_astar(
                 init, risk_threshold, max_steps, max_daily_study,
                 tutor_available, deadline_weight, fatigue_weight)
+
+            plan_a, cost_a, f_state = core.a_star(init)
 
             # PLACEHOLDER: Member F adds run_greedy() here
             plan_g, cost_g, _, rt_g, exp_g = run_astar(
@@ -420,7 +422,7 @@ with tab_whatif:
                 "Days to Deadline (override)",
                 min_value=1,
                 max_value=14,
-                value=st.session_state.current_state.get("days", 7),
+                value=st.session_state.current_state.days,
                 key="wif_days",
                 help="Drag left to simulate a closer deadline",
             )
