@@ -34,7 +34,7 @@ A Streamlit application for tracking and planning interventions for at-risk stud
 
 4. **Install required packages**
    ```bash
-   pip install streamlit 
+   pip install streamlit matplotlib
    ```
    
   
