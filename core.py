@@ -39,25 +39,25 @@ def heuristic(state):
 # ----------------------------
 def get_neighbors(s):
     neighbors = []
-
+ # NEED TO CALIBRATE FATIGUE
     neighbors.append(("Attend_Class",
-        State(s.attendance + 5, s.missing, s.score, s.activity, s.study_hours, s.days - 1), 2))
+        State(s.attendance + 5, s.missing, s.score, s.activity, s.study_hours, s.days - 1,s.fatigue + 1), 2))
 
     neighbors.append(("Study_1_Hour",
-        State(s.attendance, s.missing, s.score + 3, s.activity, s.study_hours + 1, s.days - 1), 1))
+        State(s.attendance, s.missing, s.score + 3, s.activity, s.study_hours + 1, s.days - 1,s.fatigue + 1), 1))
 
     if s.missing > 0:
         neighbors.append(("Submit_Assignment",
-            State(s.attendance, s.missing - 1, s.score, s.activity, s.study_hours, s.days - 1), 3))
+            State(s.attendance, s.missing - 1, s.score, s.activity, s.study_hours, s.days - 1,s.fatigue + 1), 3))
 
     neighbors.append(("Practice_Quiz",
-        State(s.attendance, s.missing, s.score + 5, s.activity, s.study_hours, s.days - 1), 2))
+        State(s.attendance, s.missing, s.score + 5, s.activity, s.study_hours, s.days - 1,s.fatigue + 1), 2))
 
     neighbors.append(("Meet_Tutor",
-        State(s.attendance, s.missing, s.score + 8, s.activity, s.study_hours, s.days - 1), 4))
+        State(s.attendance, s.missing, s.score + 8, s.activity, s.study_hours, s.days - 1,s.fatigue + 1), 4))
 
     neighbors.append(("Rest",
-        State(s.attendance, s.missing, s.score, s.activity, s.study_hours, s.days - 1), 1))
+        State(s.attendance, s.missing, s.score, s.activity, s.study_hours, s.days - 1,s.fatigue + 1), 1))
 
     return neighbors
 
@@ -124,7 +124,8 @@ def run_from_csv(filename):
                 float(row['avg_quiz_score']),
                 float(row['lms_activity']),
                 float(row['study_hours_per_week']),
-                float(row['days_to_deadline'])
+                float(row['days_to_deadline']),
+                0
             )
 
             print("Initial Risk:", risk_score(state))
