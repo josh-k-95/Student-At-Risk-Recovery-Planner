@@ -5,13 +5,14 @@ import csv
 # STATE
 # ----------------------------
 class State:
-    def __init__(self, attendance, missing, score, activity, study_hours, days):
+    def __init__(self, attendance, missing, score, activity, study_hours, days,fatigue):
         self.attendance = attendance
         self.missing = missing
         self.score = score
         self.activity = activity
         self.study_hours = study_hours
         self.days = days
+        self.fatigue = fatigue
 
     def is_goal(self):
         return self.missing == 0 and self.score >= 70 and self.attendance >= 75
@@ -102,7 +103,8 @@ def csv_row_to_state(row):
                 float(row['avg_quiz_score']),
                 float(row['lms_activity']),
                 float(row['study_hours_per_week']),
-                float(row['days_to_deadline'])
+                float(row['days_to_deadline']),
+                0
             )
 
     return state
