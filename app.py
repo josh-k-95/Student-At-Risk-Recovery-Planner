@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import plots
 import streamlit as st
 import random
 import pandas as pd
@@ -153,22 +155,25 @@ with st.sidebar:
 if run_button and st.session_state.current_state is not None:
     with st.spinner("Running A* search algorithm…"):
         # ← Member F's run_astar() is called here
-        plan, total_cost, final_state, runtime_ms, nodes_expanded = run_astar(
-            initial_state    = st.session_state.current_state,
-            threshold        = risk_threshold,
-            max_steps        = max_steps,
-            max_daily_study  = max_daily_study,
-            tutor_available  = tutor_available,
-            deadline_weight  = deadline_weight,
-            fatigue_weight   = fatigue_weight,
-        )
+        # plan, total_cost, final_state, runtime_ms, nodes_expanded = run_astar(
+        #     initial_state    = st.session_state.current_state,
+        #     threshold        = risk_threshold,
+        #     max_steps        = max_steps,
+        #     max_daily_study  = max_daily_study,
+        #     tutor_available  = tutor_available,
+        #     deadline_weight  = deadline_weight,
+        #     fatigue_weight   = fatigue_weight,
+        # )
+
+
+        plan, total_cost, final_state = core.a_star(st.session_state.current_state)
     # Store results in session state so all tabs can read them
     st.session_state.result = {
         "plan":            plan,
         "total_cost":      round(total_cost, 2),
         "final_state":     final_state,
-        "runtime_ms":      runtime_ms,
-        "nodes_expanded":  nodes_expanded,
+        #"runtime_ms":      runtime_ms,
+        #"nodes_expanded":  nodes_expanded,
         "risk_before":     core.risk_score(st.session_state.current_state),
         "risk_after":      core.risk_score(final_state),
         "threshold":       risk_threshold,
@@ -196,6 +201,8 @@ with tab_dashboard:
         init  = st.session_state.current_state
         res   = st.session_state.result
 
+        print(res)
+
         # ── Top metric cards ─────────────────────────────────
         # Four summary numbers shown at the top of the dashboard
         col1, col2, col3, col4 = st.columns(4)
@@ -203,14 +210,14 @@ with tab_dashboard:
 
         with col1:
             st.metric("Initial Risk Score",
-                      f"{init_risk:.1%}",
+                      f"{(init_risk/100):.1%}",
                       help="Risk before any recovery actions")
         with col2:
             if res:
                 delta = res["risk_after"] - init_risk
                 st.metric("Final Risk Score",
-                          f"{res['risk_after']:.1%}",
-                          delta=f"{delta:+.1%}",
+                          f"{(res['risk_after']/100):.1%}",
+                          delta=f"{(delta/100):+.1%}",
                           delta_color="inverse")
             else:
                 st.metric("Final Risk Score", "—")
@@ -247,7 +254,7 @@ with tab_dashboard:
             st.text_area(
                 label="Initial student state",
                 value=state_text,
-                height=220,
+                height=240,
                 disabled=True,
                 label_visibility="collapsed",
             )
@@ -256,19 +263,31 @@ with tab_dashboard:
             if res:
                 st.subheader("📝 Recovery Plan  (A*)")
 
+                # if res["plan"]:
+                #     plan_lines = []
+                #     for i, (action, cost) in enumerate(res["plan"], 1):
+                #         icon = ACTIONS.get(action, {}).get("icon", "•")
+                #         plan_lines.append(f"{i:>2}. {icon} {action:<22}  cost={cost}")
+                #     plan_lines.append("─" * 42)
+                #     plan_lines.append(f"    Total cost  : {res['total_cost']}")
+                #     plan_lines.append(f"    Runtime     : {res['runtime_ms']} ms")
+                #     plan_lines.append(f"    Nodes expand: {res['nodes_expanded']}")
+                #     plan_text = "\n".join(plan_lines)
+                # else:
+                #     plan_text = "No plan found. Try relaxing the constraints."
+
                 if res["plan"]:
                     plan_lines = []
-                    for i, (action, cost) in enumerate(res["plan"], 1):
-                        icon = ACTIONS.get(action, {}).get("icon", "•")
-                        plan_lines.append(f"{i:>2}. {icon} {action:<22}  cost={cost}")
+                    for i,action in enumerate(res["plan"], 1):
+                        icon = "•"
+                        plan_lines.append(f"{i:>2}. {icon} {action:<22}")
                     plan_lines.append("─" * 42)
                     plan_lines.append(f"    Total cost  : {res['total_cost']}")
-                    plan_lines.append(f"    Runtime     : {res['runtime_ms']} ms")
-                    plan_lines.append(f"    Nodes expand: {res['nodes_expanded']}")
+                    # plan_lines.append(f"    Runtime     : {res['runtime_ms']} ms")
+                    # plan_lines.append(f"    Nodes expand: {res['nodes_expanded']}")
                     plan_text = "\n".join(plan_lines)
                 else:
                     plan_text = "No plan found. Try relaxing the constraints."
-
                 # TEXT AREA – displays the A* recovery plan
                 st.text_area(
                     label="A* plan output",
@@ -283,12 +302,13 @@ with tab_dashboard:
                 fs   = res["final_state"]
                 risk_after = res["risk_after"]
                 final_text = (
-                    f"attendance_rate   : {fs['attendance']:.1f}\n"
-                    f"missing_submissions: {fs['missing']}\n"
-                    f"avg_quiz_score     : {fs['score']:.1f}\n"
-                    f"lms_activity       : {fs['lms']:.1f}\n"
-                    f"days_to_deadline   : {fs['days']}\n"
-                    f"fatigue_level      : {fs['fatigue']}\n"
+                    f"attendance_rate   : {fs.attendance:.1f}\n"
+                    f"missing_submissions: {fs.missing}\n"
+                    f"avg_quiz_score     : {fs.score:.1f}\n"
+                    f"lms_activity       : {fs.activity:.1f}\n"
+                    f"study_hours_per_week       : {fs.study_hours:.1f}\n"
+                    f"days_to_deadline   : {fs.days}\n"
+                    f"fatigue_level      : {fs.fatigue}\n"
                     f"─────────────────────────────\n"
                     f"risk_score         : {risk_after:.4f}\n"
                     f"status             : {'✅ NOT AT RISK' if risk_after <= risk_threshold else '⚠️ STILL AT RISK'}"
@@ -297,7 +317,7 @@ with tab_dashboard:
                 st.text_area(
                     label="Final student state",
                     value=final_text,
-                    height=210,
+                    height=240,
                     disabled=True,
                     label_visibility="collapsed",
                 )
@@ -307,17 +327,17 @@ with tab_dashboard:
             if res:
                 st.subheader("📊 Risk: Before vs After")
                 # ← Member D's plot_risk_before_after() is called here
-                fig_risk = plot_risk_before_after(
+                fig_risk = plots.plot_risk_before_after(
                     res["risk_before"], res["risk_after"], res["threshold"]
                 )
                 st.pyplot(fig_risk, use_container_width=True)
-                plt.close(fig_risk)
+                # plt.close(fig_risk)
 
                 st.subheader("📊 Action Counts")
                 # ← Member D's plot_action_counts() is called here
-                fig_actions = plot_action_counts(res["plan"])
+                fig_actions = plots.plot_action_counts(res["plan"])
                 st.pyplot(fig_actions, use_container_width=True)
-                plt.close(fig_actions)
+                # plt.close(fig_actions)
             else:
                 st.info("Charts will appear here after you run the planner.")
 
