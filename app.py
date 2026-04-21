@@ -1,4 +1,5 @@
 import streamlit as st
+import random
 import pandas as pd
 import core
 
@@ -68,14 +69,24 @@ with st.sidebar:
     elif input_mode == "Generate Random Scenario":
         import random
         if st.button("🎲 Generate Random Scenario"):
-            st.session_state.current_state = {
-                "attendance": round(random.uniform(40, 85), 1),
-                "missing":    random.randint(1, 5),
-                "score":      round(random.uniform(30, 70), 1),
-                "lms":        round(random.uniform(20, 80), 1),
-                "days":       random.randint(2, 14),
-                "fatigue":    random.randint(2, 7),
-            }
+            # st.session_state.current_state = {
+            #     "attendance": round(random.uniform(40, 85), 1),
+            #     "missing":    random.randint(1, 5),
+            #     "score":      round(random.uniform(30, 70), 1),
+            #     "lms":        round(random.uniform(20, 80), 1),
+            #     "days":       random.randint(2, 14),
+            #     "fatigue":    random.randint(2, 7),
+            # }
+
+            st.session_state.current_state = core.State(
+                attendance= round(random.uniform(40, 85), 1),
+                missing= random.randint(1, 5),
+                score=      round(random.uniform(30, 70), 1),
+                activity=        round(random.uniform(20, 80), 1),
+                study_hours= random.randint(1,15),
+                days=       random.randint(2, 14),
+                fatigue=    random.randint(2, 7)
+            )
             st.session_state.result = None
             st.success("Random scenario generated.")
 
@@ -87,22 +98,29 @@ with st.sidebar:
             miss = st.number_input("Missing Submissions", 0, 10,  2, step=1)
             quiz = st.slider("Avg Quiz Score",         0, 100, 55)
             lms  = st.slider("LMS Activity",           0, 100, 50)
+            hours = st.slider("Study hours per week", 0, 168, 14)
             days = st.number_input("Days to Deadline", 1,  30,  7, step=1)
             fat  = st.slider("Fatigue Level (0–10)",   0,  10,  4)
             submitted = st.form_submit_button("✅ Apply Values")
 
         if submitted:
-            """
-            st.session_state.current_state = {
-                "attendance": att,
-                "missing":    int(miss),
-                "score":      quiz,
-                "lms":        lms,
-                "days":       int(days),
-                "fatigue":    fat,
-            }
-            """
-            st.session_state.current_state = core.State(att,int(miss),quiz,lms,8,int(days))        
+            # st.session_state.current_state = {
+            #     "attendance": att,
+            #     "missing":    int(miss),
+            #     "score":      quiz,
+            #     "lms":        lms,
+            #     "days":       int(days),
+            #     "fatigue":    fat,
+            # }
+            st.session_state.current_state = core.State(
+                attendance= att,
+                missing=    int(miss),
+                score=      quiz,
+                activity=       lms,
+                study_hours= hours,
+                days=       int(days),
+                fatigue=    fat,
+            )
             st.session_state.result = None
             st.success("Manual values applied.")
 
@@ -218,8 +236,9 @@ with tab_dashboard:
                 f"missing_submissions: {init.missing}\n"
                 f"avg_quiz_score     : {init.score:.1f}\n"
                 f"lms_activity       : {init.activity:.1f}\n"
+                f"study_hour_per_week: {init.study_hours} \n"
                 f"days_to_deadline   : {init.days}\n"
-                f"fatigue_level      : {7}\n"   #to be changed
+                f"fatigue_level      : {init.fatigue}\n"  
                 f"─────────────────────────────\n"
                 f"risk_score         : {init_risk:.4f}\n"
                 f"status             : {'⚠️ AT RISK' if init_risk > risk_threshold else '✅ NOT AT RISK'}"
@@ -422,7 +441,7 @@ with tab_whatif:
                 "Days to Deadline (override)",
                 min_value=1,
                 max_value=14,
-                value=st.session_state.current_state.days,
+                value=int(st.session_state.current_state.days),
                 key="wif_days",
                 help="Drag left to simulate a closer deadline",
             )
