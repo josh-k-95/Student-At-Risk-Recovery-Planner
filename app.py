@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
-import plots
 import streamlit as st
 import random
 import pandas as pd
 import core
+import plots
+import time
+
 
 # ── Page configuration ──────────────────────────────────────s
 st.set_page_config(
@@ -400,21 +402,29 @@ with tab_comparison:
         # ← Member F: replace the greedy/ucs placeholders with real implementations.
         #   Each function should have the same signature as run_astar().
         with st.spinner("Running comparison algorithms…"):
-            plan_a, cost_a, _, rt_a, exp_a = run_astar(
-                init, risk_threshold, max_steps, max_daily_study,
-                tutor_available, deadline_weight, fatigue_weight)
+            # plan_a, cost_a, _, rt_a, exp_a = run_astar(
+            #     init, risk_threshold, max_steps, max_daily_study,
+            #     tutor_available, deadline_weight, fatigue_weight)
 
+            #Changed due to unsupported core
+            start_rt_a = time.time()
             plan_a, cost_a, f_state = core.a_star(init)
+            end_rt_a = time.time()
+            rt_a = end_rt_a - start_rt_a
+            exp_a = len(plan_a)
 
             # PLACEHOLDER: Member F adds run_greedy() here
-            plan_g, cost_g, _, rt_g, exp_g = run_astar(
-                init, risk_threshold, max_steps, max_daily_study,
-                tutor_available, deadline_weight, fatigue_weight)
+            # plan_g, cost_g, _, rt_g, exp_g = run_astar(
+            #     init, risk_threshold, max_steps, max_daily_study,
+            #     tutor_available, deadline_weight, fatigue_weight)
 
+            plan_g = ["Study"] 
+            plan_u = ["Study"]
+            cost_g= rt_g= exp_g= cost_s= cost_u = rt_u= exp_u = 0
             # PLACEHOLDER: Member F adds run_ucs() here
-            plan_u, cost_u, _, rt_u, exp_u = run_astar(
-                init, risk_threshold, max_steps, max_daily_study,
-                tutor_available, deadline_weight, fatigue_weight)
+            # plan_u, cost_u, _, rt_u, exp_u = run_astar(
+            #     init, risk_threshold, max_steps, max_daily_study,
+            #     tutor_available, deadline_weight, fatigue_weight)
 
         # ── Comparison table ─────────────────────────────────
         comparison_df = pd.DataFrame({
