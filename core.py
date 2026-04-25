@@ -165,11 +165,6 @@ def state_key(state):
 
 # ============================================================
 # PIECE 4 — ACTION DEFINITIONS
-# Each action takes a State and returns a NEW State.
-# Returns None if the action is not valid.
-#
-# Actions only affect academic metrics + hours_used.
-# Fatigue is the scheduler's responsibility.
 # ============================================================
 
 # Default time cost per action in hours (user adjustable in what-if)
@@ -435,9 +430,6 @@ def a_star(initial_state, available_hours_per_day=8,
 
 # ============================================================
 # PIECE 7 — RUN_ASTAR
-# The main entry point called by the GUI.
-# Wraps a_star() with timing, error handling, and
-# all the what-if parameters the GUI passes in.
 # ============================================================
 
 def run_astar(initial_state, available_hours_per_day=8,
@@ -479,7 +471,6 @@ def run_astar(initial_state, available_hours_per_day=8,
 
 # ============================================================
 # MAIN — Quick test of all pieces
-# Run: python core.py
 # ============================================================
 
 if __name__ == "__main__":
