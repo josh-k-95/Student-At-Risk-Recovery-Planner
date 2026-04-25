@@ -102,11 +102,14 @@ def csv_row_to_state(row):
 # ============================================================
 
 # Thresholds — below these values the student is at risk
-ATTENDANCE_THRESHOLD = 75.0
-QUIZ_THRESHOLD       = 60.0
+RISK_DEFAULTS = {
+    "ATTENDANCE_THRESHOLD" : 75.0,
+    "QUIZ_THRESHOLD"       : 60.0,
+    "SUBMISSION_THRESHOLD" : 0
+}
 
 
-def risk_score(state):
+def risk_score(state, risk_threshold=None):
     """
     Calculates the student's total risk score.
 
@@ -122,13 +125,17 @@ def risk_score(state):
     Returns:
         float — risk score between 0.0 and 3.0
     """
-    attendance_risk = max(0.0, (ATTENDANCE_THRESHOLD - state.attendance) / 100)
-    quiz_risk       = max(0.0, (QUIZ_THRESHOLD       - state.score)      / 100)
+    rt = RISK_DEFAULTS.copy()
+    if risk_threshold:
+        rt.update(risk_threshold)
+    
+    attendance_risk = max(0.0, (rt["ATTENDANCE_THRESHOLD"] - state.attendance) / 100)
+    quiz_risk       = max(0.0, (rt["QUIZ_THRESHOLD"]       - state.score)      / 100)
     submission_risk = min(state.missing / 10, 1.0)
 
     return round(attendance_risk + quiz_risk + submission_risk, 4)
 
-def is_goal(state):
+def is_goal(state,risk_threshold=None):
     """
     Returns True when the student is fully no longer at risk.
     All three metrics must be at or above their thresholds.
@@ -139,7 +146,7 @@ def is_goal(state):
     Returns:
         bool
     """
-    return risk_score(state) == 0.0
+    return risk_score(state,risk_threshold) == 0.0
 
 # ============================================================
 # STATE KEY — for A* closed set
@@ -177,7 +184,7 @@ ACTION_DEFAULTS = {
 }
 
 
-def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, tutor_available=True):
+def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_threshold=None,tutor_available=True):
     """
     Builds and returns the ACTIONS dictionary.
     Called once at the start of each A* run.
@@ -195,6 +202,10 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, tutor_
     tc = ACTION_DEFAULTS.copy()
     if time_costs:
         tc.update(time_costs)
+
+    rt = RISK_DEFAULTS.copy()
+    if risk_threshold:
+        rt.update(risk_threshold)
 
     def _crossed_day(state, action_time):
         """
@@ -220,7 +231,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, tutor_
     def action_attend_class(state):
         if state.hours_used + tc["Attend Class"] > hours_budget:
             return None
-        if state.attendance >= ATTENDANCE_THRESHOLD:
+        if state.attendance >= rt["ATTENDANCE_THRESHOLD"]:
             return None                          # main requirement done, block action
         s = state.copy()
         s.attendance = min(100.0, s.attendance + 3.0)                    # fixed per action
@@ -234,7 +245,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, tutor_
     def action_submit_assignment(state):
         if state.hours_used + tc["Submit Assignment"] > hours_budget:
             return None
-        if state.missing == 0:
+        if state.missing == rt["SUBMISSION_THRESHOLD"]:
             return None
         s = state.copy()
         s.score     = round(min(100.0, s.score + (0.5 * tc["Submit Assignment"])),1)
@@ -289,7 +300,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, tutor_
 # PIECE 5 — HEURISTIC + COST FUNCTION
 # ============================================================
 
-def heuristic(state, time_costs=None):
+def heuristic(state, time_costs=None, risk_threshold=None):
     """
     Estimates the minimum hours still needed to reach the goal.
     Must be ADMISSIBLE — never overestimate the true remaining cost.
@@ -308,10 +319,14 @@ def heuristic(state, time_costs=None):
     tc = ACTION_DEFAULTS.copy()
     if time_costs:
         tc.update(time_costs)
+    
+    rt = RISK_DEFAULTS.copy()
+    if risk_threshold:
+        rt.update(risk_threshold)
 
     # Gap between current value and safe threshold
-    attendance_gap = max(0.0, ATTENDANCE_THRESHOLD - state.attendance)
-    quiz_gap       = max(0.0, QUIZ_THRESHOLD       - state.score)
+    attendance_gap = max(0.0, rt["ATTENDANCE_THRESHOLD"] - state.attendance)
+    quiz_gap       = max(0.0, rt["QUIZ_THRESHOLD"]       - state.score)
     submissions    = state.missing
 
     # Minimum hours needed per metric using best action:
@@ -348,7 +363,7 @@ def cost(action_name, time_costs=None):
 # ============================================================
 
 def a_star(initial_state, available_hours_per_day=8,
-           time_costs=None, tutor_available=True):
+           time_costs=None, risk_threshold = None, tutor_available=True):
     """
     Finds the optimal recovery plan for a student using A* search.
 
@@ -367,14 +382,14 @@ def a_star(initial_state, available_hours_per_day=8,
 
     # ── Setup ────────────────────────────────────────────────
     hours_budget = initial_state.days * available_hours_per_day
-    actions      = make_actions(hours_budget,available_hours_per_day, time_costs, tutor_available)
+    actions      = make_actions(hours_budget,available_hours_per_day, time_costs,risk_threshold, tutor_available)
 
     # Each heap entry: (f, tiebreaker, g, state, path)
     # f = g + h  (total estimated cost)
     # g = hours spent so far
     # tiebreaker = counter to break equal f values cleanly
     tie         = 0
-    h0          = heuristic(initial_state, time_costs)
+    h0          = heuristic(initial_state, time_costs, risk_threshold)
     g0          = 0.0
     f0          = g0 + h0
 
@@ -395,7 +410,7 @@ def a_star(initial_state, available_hours_per_day=8,
         nodes_expanded += 1
 
         # ── Goal check ───────────────────────────────────────
-        if is_goal(current):
+        if is_goal(current, risk_threshold):
             return path, g, current, nodes_expanded
 
         # ── Expand neighbours ────────────────────────────────
@@ -414,7 +429,7 @@ def a_star(initial_state, available_hours_per_day=8,
             # Calculate new costs
             action_cost = cost(action_name, time_costs)
             new_g       = g + action_cost
-            new_h       = heuristic(new_state, time_costs)
+            new_h       = heuristic(new_state, time_costs,risk_threshold)
             new_f       = new_g + new_h
             tie        += 1
 
@@ -434,7 +449,7 @@ def a_star(initial_state, available_hours_per_day=8,
 
 def run_astar(initial_state, available_hours_per_day=8,
               time_costs=None, fatigue_costs=None,
-              tutor_available=True):
+              risk_threshold=None, tutor_available=True):
     """
     Main entry point for the GUI to run the A* planner.
 
@@ -461,6 +476,7 @@ def run_astar(initial_state, available_hours_per_day=8,
         initial_state       = initial_state,
         available_hours_per_day = available_hours_per_day,
         time_costs          = time_costs,
+        risk_threshold      = risk_threshold,
         tutor_available     = tutor_available,
     )
 

@@ -15,9 +15,6 @@ from core import (
 
 # ============================================================
 # GREEDY SEARCH
-# f(n) = h(n) only — ignores cost, always chases
-# the state that LOOKS closest to the goal.
-# Fast but not guaranteed to find the optimal plan.
 # ============================================================
 
 def greedy_search(initial_state, available_hours_per_day=8,
@@ -41,7 +38,7 @@ def greedy_search(initial_state, available_hours_per_day=8,
     """
     hours_budget = initial_state.days * available_hours_per_day
     actions      = make_actions(hours_budget, available_hours_per_day,
-                                time_costs, tutor_available)
+                                time_costs, None, tutor_available)
 
     tie        = 0
     h0         = heuristic(initial_state, time_costs)
@@ -116,7 +113,7 @@ def uniform_cost_search(initial_state, available_hours_per_day=8,
     """
     hours_budget = initial_state.days * available_hours_per_day
     actions      = make_actions(hours_budget, available_hours_per_day,
-                                time_costs, tutor_available)
+                                time_costs,None, tutor_available)
 
     tie        = 0
     g0         = 0.0
