@@ -318,9 +318,9 @@ def heuristic(state, time_costs=None):
     #   Attend Class → +1.5 attendance per action
     #   Meet Tutor   → +4.0 quiz points per action (best quiz gain)
     #   Submit       → -1 missing per action
-    hours_attendance  = math.ceil(attendance_gap / 3.0) * tc["Attend Class"]
-    hours_quiz        = math.ceil(quiz_gap       / 2.5) * tc["Practice Exam"]
-    hours_submissions = submissions                      * tc["Submit Assignment"]
+    hours_attendance  = math.ceil(attendance_gap / 3.0) 
+    hours_quiz        = math.ceil(quiz_gap       / 2.5) 
+    hours_submissions = submissions                      
 
     return max(hours_attendance, hours_quiz, hours_submissions)
 
