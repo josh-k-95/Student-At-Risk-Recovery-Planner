@@ -7,6 +7,7 @@ from collections import Counter
 import core
 import plots
 from baseline import run_greedy, run_ucs
+import scheduler
 
 # ── Page configuration ──────────────────────────────────────
 st.set_page_config(
@@ -82,6 +83,33 @@ def build_action_summary(plan):
         summary_parts.append(f"{description} ({count} time{'s' if count > 1 else ''})")
 
     return "This student should focus on: " + "; ".join(summary_parts) + "."
+
+def render_timetable_ui(timetable):
+    """Renders the scheduled timetable beautifully in Streamlit."""
+    total_days = len(timetable)
+    st.markdown(f"**Realistic Schedule:** Requires **{total_days} days** (including mandatory rest).")
+    
+    for day in timetable:
+        if not day: continue
+        day_number = day[0]["day"]
+        
+        with st.expander(f"📅 Day {day_number}", expanded=(day_number==1)):
+            # Convert day to a clean dataframe for display
+            display_data = []
+            for entry in day:
+                # Format hour (assuming 8 AM start)
+                h = int(8 + entry["hour"])
+                m = int((entry["hour"] % 1) * 60)
+                time_str = f"{h:02d}:{m:02d}"
+                
+                display_data.append({
+                    "Time": time_str,
+                    "Action": entry["action"],
+                    "Duration": f"{entry['duration']}h",
+                    "Fatigue Shift": f"{entry['fatigue_before']} ➔ {entry['fatigue_after']}/10"
+                })
+            
+            st.dataframe(display_data, use_container_width=True, hide_index=True)
 
 
 # ── App header ───────────────────────────────────────────────
@@ -205,7 +233,7 @@ with st.sidebar:
     attendance_threshold = st.slider(
         "Attendance Threshold (%)",
         min_value=50,
-        max_value=95,
+        max_value=100,
         value=75,
         step=5,
         help="Below this attendance rate = at-risk.",
@@ -233,7 +261,6 @@ with st.sidebar:
 
     sidebr_risk_threshold = {
         "ATTENDANCE_THRESHOLD": attendance_threshold,
-        "ATTENDENCE_THRESHOLD": attendance_threshold,  # kept for compatibility with older code
         "QUIZ_THRESHOLD": quiz_threshold,
         "SUBMISSION_THRESHOLD": submission_threshold,
     }
@@ -411,6 +438,25 @@ with tab_dashboard:
 
         st.divider()
 
+        st.subheader("📅 Realistic Daily Timetable")
+        if res and res["plan"]:
+            # Extract just the action names from the A* plan
+            action_list = [action_name for action_name, _, _ in res["plan"]]
+            
+            # Generate the schedule
+            timetable = scheduler.build_timetable(
+                action_list=action_list,
+                available_hours_per_day=available_hours
+            )
+            
+            # Draw the UI
+            render_timetable_ui(timetable)
+        else:
+            st.info("Run the planner to generate a timetable.")
+
+        
+        st.divider()
+
         # GRAPHS SIDE BY SIDE UNDER RECOVERY PLAN
         st.subheader("📊 Graphs")
 
@@ -465,6 +511,8 @@ with tab_dashboard:
             st.warning("No recovery plan was found. Try changing the planner settings.")
         else:
             st.info("Run the planner to generate a summary.")
+
+
 # ────────────────────────────────────────────────────────────
 #  TAB 2 – DATASET VIEW
 # ────────────────────────────────────────────────────────────
@@ -584,7 +632,7 @@ with tab_whatif:
                 "Available Hours / Day",
                 min_value=2,
                 max_value=16,
-                value=8,
+                value= 8,
                 step=1,
                 key="wif_hours",
             )
@@ -603,7 +651,7 @@ with tab_whatif:
             wif_att_threshold = st.slider(
                 "Attendance Threshold (%)",
                 min_value=50,
-                max_value=95,
+                max_value=100,
                 value=75,
                 step=5,
                 key="wif_att_threshold",
@@ -737,8 +785,8 @@ with tab_whatif:
 
             wif_recovery = st.slider(
                 "Rest Recovery Rate (%)",
-                min_value=20,
-                max_value=90,
+                min_value=10,
+                max_value=100,
                 value=60,
                 step=10,
                 key="wif_recovery",
@@ -767,7 +815,6 @@ with tab_whatif:
 
             wif_risk_threshold = {
                 "ATTENDANCE_THRESHOLD": wif_att_threshold,
-                "ATTENDENCE_THRESHOLD": wif_att_threshold,
                 "QUIZ_THRESHOLD": wif_quiz_threshold,
                 "SUBMISSION_THRESHOLD": wif_sub_threshold,
             }
@@ -876,3 +923,21 @@ with tab_whatif:
 
                 else:
                     st.info("Run the main planner first to enable comparison.")
+
+            if wres["plan"]:
+                    
+                st.markdown("**📅 Simulated Timetable**")
+                # Extract actions
+                wif_action_list = [action_name for action_name, _, _ in wres["plan"]]
+                
+                # Generate the schedule using ALL the What-If sliders!
+                wif_timetable = scheduler.build_timetable(
+                    action_list=wif_action_list,
+                    available_hours_per_day=wif_hours,
+                    time_costs=wres["time_costs"],
+                    fatigue_costs=wres["fatigue_costs"],
+                    rest_duration=wres["time_costs"].get("Rest", 1.0),
+                    recovery_rate=wif_recovery / 100.0  # Slider is 20-90, convert to 0.2-0.9
+                )
+                
+                render_timetable_ui(wif_timetable)

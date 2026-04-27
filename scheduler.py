@@ -38,7 +38,7 @@ def get_fatigue_cost(action_name, fatigue_costs=None):
     fc = FATIGUE_DEFAULTS.copy()
     if fatigue_costs:
         fc.update(fatigue_costs)
-    return fc[action_name]
+    return min(fc[action_name], MAX_FATIGUE)
 
 
 def can_perform(action_name, current_fatigue, fatigue_costs=None):
