@@ -25,7 +25,6 @@ st.markdown(
             padding-bottom: 2rem;
         }
 
-
         div[data-testid="stMetric"] {
             padding: 18px;
             border-radius: 14px;
@@ -215,7 +214,7 @@ with st.sidebar:
     quiz_threshold = st.slider(
         "Quiz Score Threshold",
         min_value=40,
-        max_value=80,
+        max_value=100,
         value=60,
         step=5,
         help="Below this quiz score = at-risk.",

@@ -164,8 +164,7 @@ def state_key(state):
     return (
         round(state.attendance, 1),
         state.missing,
-        round(state.score,      1),
-        round(state.hours_used, 1),
+        round(state.score,3),
         state.tutor_used_today,
         state.practice_used_today,
     )
@@ -333,9 +332,12 @@ def heuristic(state, time_costs=None, risk_threshold=None):
     #   Attend Class → +1.5 attendance per action
     #   Meet Tutor   → +4.0 quiz points per action (best quiz gain)
     #   Submit       → -1 missing per action
-    hours_attendance  = math.ceil(attendance_gap / 3.0) 
-    hours_quiz        = math.ceil(quiz_gap       / 1.5) 
-    hours_submissions = submissions                      
+    hours_attendance = (attendance_gap / 3.0) * tc["Attend Class"]
+    hours_submissions = submissions * tc["Submit Assignment"]
+
+    total_free_score = (hours_attendance * 0.7) + (hours_submissions * 0.5)
+    remaining_quiz_gap = max(0,quiz_gap - total_free_score)
+    hours_quiz = remaining_quiz_gap / 2.5                      
 
     return max(hours_attendance, hours_quiz, hours_submissions)
 

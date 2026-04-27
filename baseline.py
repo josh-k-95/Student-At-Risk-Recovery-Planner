@@ -57,7 +57,7 @@ def greedy_search(initial_state, available_hours_per_day=8,
         closed_set.add(key)
         nodes_expanded += 1
 
-        if is_goal(current):
+        if is_goal(current,risk_threshold):
             total_cost = sum(
                 cost(action_name, time_costs)
                 for action_name, _, _ in path
@@ -132,7 +132,7 @@ def uniform_cost_search(initial_state, available_hours_per_day=8,
         closed_set.add(key)
         nodes_expanded += 1
 
-        if is_goal(current):
+        if is_goal(current,risk_threshold):
             return path, g, current, nodes_expanded
 
         for action_name, action_fn in actions.items():
