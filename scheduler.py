@@ -13,10 +13,10 @@ import math
 
 FATIGUE_DEFAULTS = {
     "Study":              3,
-    "Attend Class":       4,
+    "Attend Class":       6,
     "Submit Assignment":  3,
     "Practice Exam":      4,
-    "Meet Tutor":         4,
+    "Meet Tutor":         6,
     "Rest":               0,
 }
 
@@ -124,37 +124,30 @@ def rests_needed(action_name, current_fatigue,
 
 
 # ============================================================
-# PIECE 3 — BUILD TIMETABLE
+# PIECE 3 — BUILD TIMETABLE (SMART ARRANGER)
 # ============================================================
 
-def build_timetable(action_list, available_hours_per_day=8,
+# Define how many times an action can be performed in a single day
+DAILY_CAPS = {
+    "Attend Class":       1,
+    "Practice Exam":      1,
+    "Meet Tutor":         1,
+    "Study":              99,  # Unlimited chunks
+    "Submit Assignment":  99,  # Unlimited chunks
+    "Rest":               99,
+}
+
+def build_timetable(action_list, available_hours_per_day, deadline_days,
                     time_costs=None, fatigue_costs=None,
                     rest_duration=DEFAULT_REST_DURATION,
                     recovery_rate=DEFAULT_REST_RECOVERY):
     """
-    Converts an A* action list into a scheduled timetable.
-
-    Parameters:
-        action_list             : list of action name strings from A*
-        available_hours_per_day : float — daily hour budget
-        time_costs              : dict  — {action: hours} overrides
-        fatigue_costs           : dict  — {action: fatigue} overrides
-        rest_duration           : float — hours per rest session
-        recovery_rate           : float — fatigue recovery rate (0.0–1.0)
-
-    Returns:
-        timetable : list of days, each day is a list of entries:
-            {
-                "day":            int,
-                "hour":           float,  # hour within the day
-                "action":         str,
-                "fatigue_before": int,
-                "fatigue_after":  int,
-                "duration":       float,
-            }
+    Converts an A* action list into a realistic timetable.
+    Acts as a 'Smart Arranger' — skips actions that are on cooldown
+    and fills the day with other available actions.
+    
+    Returns None if the plan mathematically cannot fit within the deadline.
     """
-
-    # Merge time cost overrides
     tc = {
         "Study":             1.0,
         "Attend Class":      1.0,
@@ -163,116 +156,126 @@ def build_timetable(action_list, available_hours_per_day=8,
         "Meet Tutor":        3.0,
         "Rest":              rest_duration,
     }
-    if time_costs:
-        tc.update(time_costs)
+    if time_costs: tc.update(time_costs)
 
-    # Working variables
-    timetable        = []       # final output — list of days
-    current_day      = []       # entries for the current day
+    timetable        = []       
+    current_day      = []       
     day_number       = 1
     hours_used_today = 0.0
     fatigue          = 0
+    
+    # Track cooldowns per day
+    actions_done_today = {k: 0 for k in DAILY_CAPS}
 
-    actions_remaining = list(action_list)   # copy so we don't modify original
+    # Treat the A* plan as a pool of required ingredients
+    pool = list(action_list)
 
-    while actions_remaining:
+    while pool:
+        # 1. HARD DEADLINE CHECK
+        if day_number > deadline_days:
+            return None # The plan is physically impossible in the given timeframe
 
-        next_action = actions_remaining[0]
-        action_time = tc[next_action]
-
-        # ── Check if action fits in today's remaining hours ──
-        hours_left_today = available_hours_per_day - hours_used_today
-
-        # Does the action itself fit today? If not, start a new day
-        if action_time > hours_left_today:
-            # Save current day and start fresh
+        # 2. FIND A VIABLE ACTION
+        # Look through the pool for the first action that hasn't hit its daily cap
+        chosen_action = None
+        for action in pool:
+            if actions_done_today.get(action, 0) < DAILY_CAPS.get(action, 1):
+                chosen_action = action
+                break
+        
+        # 3. IF ALL ACTIONS ARE ON COOLDOWN, FORCE ROLLOVER
+        if not chosen_action:
             if current_day:
                 timetable.append(current_day)
-            current_day       = []
-            day_number       += 1
-            hours_used_today  = 0.0
-            fatigue           = 0        # overnight reset
-            continue                     # retry same action tomorrow
+            current_day = []
+            day_number += 1
+            hours_used_today = 0.0
+            fatigue = 0
+            actions_done_today = {k: 0 for k in DAILY_CAPS}
+            continue
 
-        # ── Insert rest if needed before this action ────────
-        while not can_perform(next_action, fatigue, fatigue_costs):
+        action_time = tc[chosen_action]
+        hours_left_today = available_hours_per_day - hours_used_today
 
+        # 4. DOES IT FIT IN TODAY'S REMAINING TIME?
+        if action_time > hours_left_today and hours_used_today > 0:
+            if current_day:
+                timetable.append(current_day)
+            current_day = []
+            day_number += 1
+            hours_used_today = 0.0
+            fatigue = 0
+            actions_done_today = {k: 0 for k in DAILY_CAPS}
+            continue
+
+        # 5. DOES IT EXCEED MAXIMUM FATIGUE? (INSERT REST)
+        if not can_perform(chosen_action, fatigue, fatigue_costs):
             rest_time = tc["Rest"]
-
-            # Check if rest fits today
-            if hours_used_today + rest_time > available_hours_per_day:
-                # No room for rest today — start new day
+            
+            # If rest doesn't fit today, roll over
+            if rest_time > (available_hours_per_day - hours_used_today) and hours_used_today > 0:
                 if current_day:
                     timetable.append(current_day)
-                current_day       = []
-                day_number       += 1
-                hours_used_today  = 0.0
-                fatigue           = 0    # overnight reset
-                break                   # recheck action tomorrow
+                current_day = []
+                day_number += 1
+                hours_used_today = 0.0
+                fatigue = 0
+                actions_done_today = {k: 0 for k in DAILY_CAPS}
+                continue
 
-            # Insert rest entry
+            # Perform Rest
             fatigue_before = fatigue
-            fatigue        = apply_rest(fatigue, recovery_rate)
-
+            fatigue = apply_rest(fatigue, recovery_rate)
+            
             current_day.append({
                 "day":            day_number,
-                "hour":           round(hours_used_today, 1),
+                "start_hour":     round(hours_used_today, 1),
+                "end_hour":       round(hours_used_today + rest_time, 1),
                 "action":         "Rest",
                 "fatigue_before": fatigue_before,
                 "fatigue_after":  fatigue,
                 "duration":       rest_time,
             })
-
             hours_used_today = round(hours_used_today + rest_time, 1)
-        
-        # Recheck: after rest, does action still fit today?
-        if hours_used_today + action_time > available_hours_per_day:
-            if current_day:
-                timetable.append(current_day)
-            current_day       = []
-            day_number       += 1
-            hours_used_today  = 0.0
-            fatigue           = 0
-            continue
+            actions_done_today["Rest"] += 1
+            continue # Re-evaluate the chosen_action now that we are rested
 
-        # ── Re-check after possible day rollover ────────────
-        if not can_perform(next_action, fatigue, fatigue_costs):
-            continue    # still can't perform — loop will retry
-
-        # ── Perform the action ───────────────────────────────
+        # 6. PERFORM THE ACTION
         fatigue_before = fatigue
-        fatigue       += get_fatigue_cost(next_action, fatigue_costs)
-
+        fatigue += get_fatigue_cost(chosen_action, fatigue_costs)
+        
         current_day.append({
             "day":            day_number,
-            "hour":           round(hours_used_today, 1),
-            "action":         next_action,
+            "start_hour":     round(hours_used_today, 1),
+            "end_hour":       round(hours_used_today + action_time, 1),
+            "action":         chosen_action,
             "fatigue_before": fatigue_before,
             "fatigue_after":  fatigue,
             "duration":       action_time,
         })
-
+        
         hours_used_today = round(hours_used_today + action_time, 1)
-        actions_remaining.pop(0)    # action complete, remove from list
+        actions_done_today[chosen_action] += 1
+        
+        # Remove from the pool so we don't do it again
+        pool.remove(chosen_action)
 
-        # ── End of day check ─────────────────────────────────
+        # 7. END OF DAY CHECK
         if hours_used_today >= available_hours_per_day:
             timetable.append(current_day)
-            current_day       = []
-            day_number       += 1
-            hours_used_today  = 0.0
-            fatigue           = 0        # overnight reset
+            current_day = []
+            day_number += 1
+            hours_used_today = 0.0
+            fatigue = 0
+            actions_done_today = {k: 0 for k in DAILY_CAPS}
 
-        print(f"DEBUG: hours_used={hours_used_today}, "
-            f"next={next_action}, "
-            f"fatigue={fatigue}, "
-            f"can_perform={can_perform(next_action, fatigue, fatigue_costs)}")
-
-    # Save any remaining entries in the last day
     if current_day:
         timetable.append(current_day)
-    
-    
+        
+    # Final check: did the very last day push us over the deadline?
+    if day_number > deadline_days and not (day_number == deadline_days + 1 and len(current_day) == 0):
+        return None
+
     return timetable
 
 

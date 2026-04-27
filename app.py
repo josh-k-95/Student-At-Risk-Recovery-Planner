@@ -84,32 +84,51 @@ def build_action_summary(plan):
 
     return "This student should focus on: " + "; ".join(summary_parts) + "."
 
-def render_timetable_ui(timetable):
-    """Renders the scheduled timetable beautifully in Streamlit."""
+def render_timetable_ui(timetable, deadline_days):
+    """Renders the scheduled timetable beautifully in Streamlit as a scrollable text box."""
+    if timetable is None:
+        st.error(
+            f"⚠️ **DEADLINE MISSED!** A theoretical plan exists, but it is physically "
+            f"impossible to complete it within the {deadline_days}-day deadline due to "
+            f"fatigue limits, required rests, and daily action caps."
+        )
+        return
+
     total_days = len(timetable)
-    st.markdown(f"**Realistic Schedule:** Requires **{total_days} days** (including mandatory rest).")
+    st.success(f"✅ **SCHEDULE VALID:** Realistic plan fits within {total_days} days (Deadline: {deadline_days} days).")
     
+    # Build a single clean text block for the entire schedule
+    schedule_lines = []
     for day in timetable:
         if not day: continue
-        day_number = day[0]["day"]
+        day_num = day[0]["day"]
         
-        with st.expander(f"📅 Day {day_number}", expanded=(day_number==1)):
-            # Convert day to a clean dataframe for display
-            display_data = []
-            for entry in day:
-                # Format hour (assuming 8 AM start)
-                h = int(8 + entry["hour"])
-                m = int((entry["hour"] % 1) * 60)
-                time_str = f"{h:02d}:{m:02d}"
-                
-                display_data.append({
-                    "Time": time_str,
-                    "Action": entry["action"],
-                    "Duration": f"{entry['duration']}h",
-                    "Fatigue Shift": f"{entry['fatigue_before']} ➔ {entry['fatigue_after']}/10"
-                })
+        schedule_lines.append(f"═══ DAY {day_num} ═══")
+        for entry in day:
+            start  = entry["start_hour"]
+            end    = entry["end_hour"]
+            action = entry["action"]
+            dur    = entry["duration"]
+            fb     = entry["fatigue_before"]
+            fa     = entry["fatigue_after"]
             
-            st.dataframe(display_data, use_container_width=True, hide_index=True)
+            # Format: Hour  0.0 ➔  1.5 : Study              (1.5h)  | Fatigue:  0 ➔  3
+            schedule_lines.append(
+                f"Hour {start:>4.1f} ➔ {end:<4.1f} : {action:<20} "
+                f"({dur:>3.1f}h)  | Fatigue: {fb:>2} ➔ {fa:<2}"
+            )
+        schedule_lines.append("") # Blank line between days
+
+    full_text = "\n".join(schedule_lines)
+    
+    # Render as a scrollable text area
+    st.text_area(
+        label="Detailed Itinerary", 
+        value=full_text, 
+        height=320, 
+        disabled=True, 
+        label_visibility="collapsed"
+    )
 
 
 # ── App header ───────────────────────────────────────────────
@@ -437,20 +456,21 @@ with tab_dashboard:
             st.info("Run the planner to see the recovery plan.")
 
         st.divider()
-
         st.subheader("📅 Realistic Daily Timetable")
+
         if res and res["plan"]:
             # Extract just the action names from the A* plan
             action_list = [action_name for action_name, _, _ in res["plan"]]
             
-            # Generate the schedule
+            # Run the Smart Arranger Scheduler
             timetable = scheduler.build_timetable(
                 action_list=action_list,
-                available_hours_per_day=available_hours
+                available_hours_per_day=available_hours,
+                deadline_days=init.days
             )
             
             # Draw the UI
-            render_timetable_ui(timetable)
+            render_timetable_ui(timetable, init.days)
         else:
             st.info("Run the planner to generate a timetable.")
 
@@ -926,18 +946,19 @@ with tab_whatif:
 
             if wres["plan"]:
                     
-                st.markdown("**📅 Simulated Timetable**")
-                # Extract actions
-                wif_action_list = [action_name for action_name, _, _ in wres["plan"]]
-                
-                # Generate the schedule using ALL the What-If sliders!
-                wif_timetable = scheduler.build_timetable(
-                    action_list=wif_action_list,
-                    available_hours_per_day=wif_hours,
-                    time_costs=wres["time_costs"],
-                    fatigue_costs=wres["fatigue_costs"],
-                    rest_duration=wres["time_costs"].get("Rest", 1.0),
-                    recovery_rate=wif_recovery / 100.0  # Slider is 20-90, convert to 0.2-0.9
-                )
-                
-                render_timetable_ui(wif_timetable)
+                    st.markdown("**📅 Simulated Timetable**")
+                    # Extract actions
+                    wif_action_list = [action_name for action_name, _, _ in wres["plan"]]
+                    
+                    # Generate the schedule using ALL the What-If sliders!
+                    wif_timetable = scheduler.build_timetable(
+                        action_list=wif_action_list,
+                        available_hours_per_day=wif_hours,
+                        deadline_days=wif_days,
+                        time_costs=wres["time_costs"],
+                        fatigue_costs=wres["fatigue_costs"],
+                        rest_duration=wres["time_costs"].get("Rest", 1.0),
+                        recovery_rate=wif_recovery / 100.0  # Convert 20-90 slider to 0.2-0.9
+                    )
+                    
+                    render_timetable_ui(wif_timetable, wif_days)
