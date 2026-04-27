@@ -22,23 +22,23 @@ students = [
 ]
 
 def plot_risk_before_after(before_risk, after_risk, risk_thres):
-    plt.figure()
-    plt.bar(["Before","After"], [before_risk, after_risk])
-    plt.title("Risk Score Before and After A*")
-    plt.ylabel("Risk Score")
-    return plt
+    fig, ax = plt.subplots(figsize=(5, 3))
+    ax.bar(["Before", "After"], [before_risk, after_risk], color=["#ff6b6b", "#51cf66"])
+    ax.set_title("Risk Score Before and After A*")
+    ax.set_ylabel("Risk Score")
+    ax.set_ylim(0, max(before_risk, after_risk, 1))
+    return fig
 
 def plot_action_counts(plan):
     action_counter = Counter()
-
     action_counter.update(plan)
 
-    plt.figure()
-    plt.bar(action_counter.keys(), action_counter.values())
-    plt.title("Action Frequency")
-    plt.ylabel("Count")
-    plt.xticks(rotation=45)
-    return plt
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.bar(action_counter.keys(), action_counter.values(), color="#4dabf7")
+    ax.set_title("Recommended Action Frequency")
+    ax.set_ylabel("Count")
+    ax.tick_params(axis="x", rotation=35)
+    return fig
 
 if __name__ == "__main__":
     names = [s["name"] for s in students]

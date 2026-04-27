@@ -18,7 +18,7 @@ from core import (
 # ============================================================
 
 def greedy_search(initial_state, available_hours_per_day=8,
-                  time_costs=None, tutor_available=True):
+                  time_costs=None, risk_threshold=None, tutor_available=True):
     """
     Greedy Best-First Search.
     Always expands the node that appears closest to the goal
@@ -38,7 +38,7 @@ def greedy_search(initial_state, available_hours_per_day=8,
     """
     hours_budget = initial_state.days * available_hours_per_day
     actions      = make_actions(hours_budget, available_hours_per_day,
-                                time_costs, None, tutor_available)
+                                time_costs, risk_threshold, tutor_available)
 
     tie        = 0
     h0         = heuristic(initial_state, time_costs)
@@ -92,7 +92,7 @@ def greedy_search(initial_state, available_hours_per_day=8,
 # ============================================================
 
 def uniform_cost_search(initial_state, available_hours_per_day=8,
-                        time_costs=None, tutor_available=True):
+                        time_costs=None, risk_threshold=None, tutor_available=True):
     """
     Uniform Cost Search.
     Always expands the node with the lowest cumulative cost.
@@ -113,7 +113,7 @@ def uniform_cost_search(initial_state, available_hours_per_day=8,
     """
     hours_budget = initial_state.days * available_hours_per_day
     actions      = make_actions(hours_budget, available_hours_per_day,
-                                time_costs,None, tutor_available)
+                                time_costs,risk_threshold, tutor_available)
 
     tie        = 0
     g0         = 0.0
@@ -163,7 +163,7 @@ def uniform_cost_search(initial_state, available_hours_per_day=8,
 
 def run_greedy(initial_state, available_hours_per_day=8,
                time_costs=None, fatigue_costs=None,
-               tutor_available=True):
+               risk_threshold=None,tutor_available=True):
     """Wrapper for greedy_search() matching run_astar() signature."""
     start = time.time()
 
@@ -171,6 +171,7 @@ def run_greedy(initial_state, available_hours_per_day=8,
         initial_state           = initial_state,
         available_hours_per_day = available_hours_per_day,
         time_costs              = time_costs,
+        risk_threshold          = risk_threshold,
         tutor_available         = tutor_available,
     )
 
@@ -179,7 +180,7 @@ def run_greedy(initial_state, available_hours_per_day=8,
 
 
 def run_ucs(initial_state, available_hours_per_day=8,
-            time_costs=None, fatigue_costs=None,
+            time_costs=None, fatigue_costs=None,risk_threshold=None,
             tutor_available=True):
     """Wrapper for uniform_cost_search() matching run_astar() signature."""
     start = time.time()
@@ -188,6 +189,7 @@ def run_ucs(initial_state, available_hours_per_day=8,
         initial_state           = initial_state,
         available_hours_per_day = available_hours_per_day,
         time_costs              = time_costs,
+        risk_threshold          = risk_threshold,
         tutor_available         = tutor_available,
     )
 
@@ -235,6 +237,7 @@ if __name__ == "__main__":
             plan, total_cost, final, runtime_ms, nodes = run_fn(
                 initial_state           = st,
                 available_hours_per_day = 8,
+                risk_threshold          = {"ATTENDENCE_THRESHOLD": 75,"QUIZ_THRESHOLD": 60.0, "SUBMISSION_THRESHOLD" : 0},
                 tutor_available         = not tutor,
             )
 
