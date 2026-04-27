@@ -131,7 +131,9 @@ def risk_score(state, risk_threshold=None):
     
     attendance_risk = max(0.0, (rt["ATTENDANCE_THRESHOLD"] - state.attendance) / 100)
     quiz_risk       = max(0.0, (rt["QUIZ_THRESHOLD"]       - state.score)      / 100)
-    submission_risk = min(state.missing / 10, 1.0)
+
+    missing_gap_sub = max(0.0, state.missing - rt["SUBMISSION_THRESHOLD"])
+    submission_risk = min(missing_gap_sub / 10, 1.0)
 
     return round(attendance_risk + quiz_risk + submission_risk, 4)
 
@@ -244,7 +246,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
     def action_submit_assignment(state):
         if state.hours_used + tc["Submit Assignment"] > hours_budget:
             return None
-        if state.missing == rt["SUBMISSION_THRESHOLD"]:
+        if state.missing <= 0:
             return None
         s = state.copy()
         s.score     = round(min(100.0, s.score + (0.5 * tc["Submit Assignment"])),1)
