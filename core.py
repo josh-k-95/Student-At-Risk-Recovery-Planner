@@ -224,6 +224,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
         s = state.copy()
         s.score      = min(100.0, s.score + (1.5 * tc["Study"]))
         s.activity   = min(100.0, s.activity + (1.0 * tc["Study"]))
+        s.study_hours = round(s.study_hours + tc["Study"], 1)
         s.hours_used = round(s.hours_used + tc["Study"], 1)
         if _crossed_day(state, tc["Study"]):
             s.tutor_used_today = False      # new day, reset flag
@@ -238,6 +239,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
         s.attendance = min(100.0, s.attendance + 3.0)                    # fixed per action
         s.score      = round(min(100.0, s.score    + 0.7 * tc["Attend Class"]),1) # scales with time
         s.activity   = min(100.0, s.activity + 1.0 * tc["Attend Class"]) # scales with time
+        s.study_hours = round(s.study_hours + tc["Attend Class"], 1)
         s.hours_used = round(s.hours_used + tc["Attend Class"], 1)
         if _crossed_day(state, tc["Attend Class"]):
             s.tutor_used_today = False
@@ -252,6 +254,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
         s.score     = round(min(100.0, s.score + (0.5 * tc["Submit Assignment"])),1)
         s.missing    = s.missing - 1
         s.activity   = min(100.0, s.activity + (2.0 * tc["Submit Assignment"]))
+        s.study_hours = round(s.study_hours + tc["Submit Assignment"], 1)
         s.hours_used = round(s.hours_used + tc["Submit Assignment"], 1)
         if _crossed_day(state, tc["Submit Assignment"]):
             s.tutor_used_today = False
@@ -265,6 +268,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
         s = state.copy()
         s.score                = round(min(100.0, s.score + (2.5 * tc["Practice Exam"])), 1)
         s.activity             = min(100.0, s.activity + 2.0)
+        s.study_hours = round(s.study_hours + tc["Practice Exam"], 1)
         s.hours_used           = round(s.hours_used + tc["Practice Exam"], 1)
         s.practice_used_today  = True          
         if _crossed_day(state, tc["Practice Exam"]):
@@ -279,6 +283,7 @@ def make_actions(hours_budget,available_hours_per_day=8, time_costs=None, risk_t
         s = state.copy()
         s.score            = round(min(100.0, s.score + (2.0 * tc["Meet Tutor"])),1)
         s.activity         = min(100.0, s.activity + 3.0)
+        s.study_hours = round(s.study_hours + tc["Meet Tutor"], 1)
         s.hours_used       = round(s.hours_used + tc["Meet Tutor"], 1)
         s.tutor_used_today = True           # flag used
         if _crossed_day(state, tc["Meet Tutor"]):
@@ -435,7 +440,7 @@ def a_star(initial_state, available_hours_per_day=8,
             new_g       = g + action_cost
             new_h       = heuristic(new_state, time_costs,risk_threshold)
             new_f       = new_g + new_h
-            tie        += 1
+            # tie        += 1
 
             # Record this step for the plan output
             step     = (action_name, current.copy(), new_state.copy())
