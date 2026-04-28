@@ -124,7 +124,7 @@ def rests_needed(action_name, current_fatigue,
 
 
 # ============================================================
-# PIECE 3 — BUILD TIMETABLE (SMART ARRANGER)
+# PIECE 3 — BUILD TIMETABLE 
 # ============================================================
 
 # Define how many times an action can be performed in a single day
@@ -171,11 +171,10 @@ def build_timetable(action_list, available_hours_per_day, deadline_days,
     pool = list(action_list)
 
     while pool:
-        # 1. HARD DEADLINE CHECK
+        #  HARD DEADLINE CHECK
         if day_number > deadline_days:
             return None # The plan is physically impossible in the given timeframe
 
-        # 2. FIND A VIABLE ACTION
         # Look through the pool for the first action that hasn't hit its daily cap
         chosen_action = None
         for action in pool:
@@ -183,7 +182,7 @@ def build_timetable(action_list, available_hours_per_day, deadline_days,
                 chosen_action = action
                 break
         
-        # 3. IF ALL ACTIONS ARE ON COOLDOWN, FORCE ROLLOVER
+        #  IF ALL ACTIONS ARE ON COOLDOWN, FORCE ROLLOVER
         if not chosen_action:
             if current_day:
                 timetable.append(current_day)
@@ -197,7 +196,6 @@ def build_timetable(action_list, available_hours_per_day, deadline_days,
         action_time = tc[chosen_action]
         hours_left_today = available_hours_per_day - hours_used_today
 
-        # 4. DOES IT FIT IN TODAY'S REMAINING TIME?
         if action_time > hours_left_today and hours_used_today > 0:
             if current_day:
                 timetable.append(current_day)
@@ -208,11 +206,9 @@ def build_timetable(action_list, available_hours_per_day, deadline_days,
             actions_done_today = {k: 0 for k in DAILY_CAPS}
             continue
 
-        # 5. DOES IT EXCEED MAXIMUM FATIGUE? (INSERT REST)
         if not can_perform(chosen_action, fatigue, fatigue_costs):
             rest_time = tc["Rest"]
             
-            # If rest doesn't fit today, roll over
             if rest_time > (available_hours_per_day - hours_used_today) and hours_used_today > 0:
                 if current_day:
                     timetable.append(current_day)
