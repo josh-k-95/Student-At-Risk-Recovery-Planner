@@ -440,7 +440,7 @@ def a_star(initial_state, available_hours_per_day=8,
             new_g       = g + action_cost
             new_h       = heuristic(new_state, time_costs,risk_threshold)
             new_f       = new_g + new_h
-            # tie        += 1
+            tie        += 1
 
             # Record this step for the plan output
             step     = (action_name, current.copy(), new_state.copy())
